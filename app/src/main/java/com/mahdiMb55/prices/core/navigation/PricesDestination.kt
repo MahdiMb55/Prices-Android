@@ -4,7 +4,11 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 object PricesDestination {
-    const val startDestination = "onboarding"
+    const val startDestination = "startup"
+
+    object Startup {
+        const val route = "startup"
+    }
 
     object Onboarding {
         const val route = "onboarding"

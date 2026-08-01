@@ -70,9 +70,11 @@ Network failures preserve HTTP status and stable backend error codes without par
 
 The MVP will grow toward pairing, product search, product and variation price editing, conflict handling, and price-history display. Pairing and authentication details must use the Prices plugin contract, not assumptions from the generic WooCommerce API.
 
-## Current startup rule
+## Discovery startup rule
 
-The navigation shell starts at onboarding on every launch. This is an explicit temporary rule; the real startup decision will later depend on secure connection storage and must not be represented by fake authentication or persistent connection state in the shell.
+The app asynchronously reads one non-sensitive DataStore snapshot at startup. An absent, corrupted, or unsupported snapshot starts onboarding. A valid `Discovered` snapshot starts the pairing destination, which displays only safe store metadata and explicitly does not imply authentication. Products and authenticated startup states do not exist yet.
+
+The snapshot has an explicit schema version and contains no tokens, pairing codes, credentials, headers, or raw discovery JSON. Change Store clears only this discovered snapshot. Real pairing and secure storage remain future work.
 
 ## Testing strategy
 

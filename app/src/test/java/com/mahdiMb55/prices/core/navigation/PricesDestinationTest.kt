@@ -6,8 +6,8 @@ import org.junit.Test
 
 class PricesDestinationTest {
     @Test
-    fun startupDestinationIsOnboarding() {
-        assertEquals(PricesDestination.Onboarding.route, PricesDestination.startDestination)
+    fun startupDestinationWaitsForStoredDiscoveryState() {
+        assertEquals(PricesDestination.Startup.route, PricesDestination.startDestination)
     }
 
     @Test
