@@ -1,6 +1,7 @@
 package com.mahdiMb55.prices.data.security
 
 import android.content.Context
+import kotlinx.coroutines.CancellationException
 
 internal class SharedPreferencesSecureTokenRecordStore(
     context: Context,
@@ -11,6 +12,8 @@ internal class SharedPreferencesSecureTokenRecordStore(
     override fun read(): TokenRecordReadResult = try {
         preferences.getString(RECORD_KEY, null)?.let(TokenRecordReadResult::Present)
             ?: TokenRecordReadResult.Missing
+    } catch (cancellation: CancellationException) {
+        throw cancellation
     } catch (_: Exception) {
         TokenRecordReadResult.Failure
     }
@@ -21,6 +24,8 @@ internal class SharedPreferencesSecureTokenRecordStore(
         } else {
             TokenRecordWriteResult.Failure
         }
+    } catch (cancellation: CancellationException) {
+        throw cancellation
     } catch (_: Exception) {
         TokenRecordWriteResult.Failure
     }
@@ -31,6 +36,8 @@ internal class SharedPreferencesSecureTokenRecordStore(
         } else {
             TokenRecordClearResult.Failure
         }
+    } catch (cancellation: CancellationException) {
+        throw cancellation
     } catch (_: Exception) {
         TokenRecordClearResult.Failure
     }

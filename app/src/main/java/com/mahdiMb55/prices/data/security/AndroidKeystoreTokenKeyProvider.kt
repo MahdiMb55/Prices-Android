@@ -3,6 +3,7 @@ package com.mahdiMb55.prices.data.security
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
+import kotlinx.coroutines.CancellationException
 import java.security.KeyStore
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -12,6 +13,8 @@ internal class AndroidKeystoreTokenKeyProvider(
 ) : TokenKeyProvider {
     override fun getOrCreateEncryptionKey(): TokenKeyResult = try {
         existingKey()?.let(TokenKeyResult::Available) ?: createKey()
+    } catch (cancellation: CancellationException) {
+        throw cancellation
     } catch (_: KeyPermanentlyInvalidatedException) {
         TokenKeyResult.Invalidated
     } catch (_: Exception) {
@@ -20,6 +23,8 @@ internal class AndroidKeystoreTokenKeyProvider(
 
     override fun getExistingDecryptionKey(): TokenKeyResult = try {
         existingKey()?.let(TokenKeyResult::Available) ?: TokenKeyResult.Missing
+    } catch (cancellation: CancellationException) {
+        throw cancellation
     } catch (_: KeyPermanentlyInvalidatedException) {
         TokenKeyResult.Invalidated
     } catch (_: Exception) {

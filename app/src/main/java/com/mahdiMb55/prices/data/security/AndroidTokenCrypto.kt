@@ -1,6 +1,7 @@
 package com.mahdiMb55.prices.data.security
 
 import android.security.keystore.KeyPermanentlyInvalidatedException
+import kotlinx.coroutines.CancellationException
 import java.nio.charset.StandardCharsets
 import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
@@ -18,6 +19,8 @@ internal class AndroidTokenCrypto : TokenCrypto {
                 ),
             )
         }
+    } catch (cancellation: CancellationException) {
+        throw cancellation
     } catch (_: KeyPermanentlyInvalidatedException) {
         TokenEncryptionResult.KeyInvalidated
     } catch (_: Exception) {
@@ -31,6 +34,8 @@ internal class AndroidTokenCrypto : TokenCrypto {
             init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
             TokenDecryptionResult.Success(String(doFinal(ciphertext), StandardCharsets.UTF_8))
         }
+    } catch (cancellation: CancellationException) {
+        throw cancellation
     } catch (_: KeyPermanentlyInvalidatedException) {
         TokenDecryptionResult.KeyInvalidated
     } catch (_: AEADBadTagException) {

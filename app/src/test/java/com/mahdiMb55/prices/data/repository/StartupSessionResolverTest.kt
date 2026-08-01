@@ -127,9 +127,18 @@ class StartupSessionResolverTest {
         assertEquals(0, cleanup.clearLocalCalls)
     }
 
-    @Test fun storageFailureDoesNotOpenProducts() = runTest {
-        val result = resolver(token = SecureTokenReadResult.StorageFailure).resolve()
+    @Test fun storageFailureDoesNotOpenProductsOrDestroyPersistentRecords() = runTest {
+        val tokenStore = InMemoryAccessTokenProvider()
+        val cleanup = StartupFakeSecureSessionRepository()
+        val result = resolver(
+            token = SecureTokenReadResult.StorageFailure,
+            tokenStore = tokenStore,
+            cleanup = cleanup,
+        ).resolve()
+
         assertTrue(result is StartupResolution.StorageFailure)
+        assertNull(tokenStore.currentToken())
+        assertEquals(0, cleanup.clearLocalCalls)
     }
 
     @Test fun cancellationClearsTemporaryMemoryAndPreservesPersistentRecords() = runTest {
@@ -140,6 +149,7 @@ class StartupSessionResolverTest {
             throw AssertionError("Expected cancellation")
         } catch (_: CancellationException) {
             assertNull(tokenStore.currentToken())
+            assertEquals(0, secure.clearCalls)
         }
     }
 
@@ -228,12 +238,17 @@ private class StartupFakeSecureTokenStorage(
     private val result: SecureTokenReadResult = SecureTokenReadResult.Available("synthetic-token"),
     private val throwOnRead: Boolean = false,
 ) : SecureTokenStorage {
+    var clearCalls = 0
+
     override suspend fun read(): SecureTokenReadResult {
         if (throwOnRead) throw CancellationException("synthetic cancellation")
         return result
     }
     override suspend fun write(token: String) = SecureTokenWriteResult.Success
-    override suspend fun clear() = SecureTokenWriteResult.Success
+    override suspend fun clear(): SecureTokenWriteResult {
+        clearCalls++
+        return SecureTokenWriteResult.Success
+    }
 }
 
 private class StartupFakeSecureSessionRepository : SecureSessionRepository {

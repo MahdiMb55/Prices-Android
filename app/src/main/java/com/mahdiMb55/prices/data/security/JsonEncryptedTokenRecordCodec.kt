@@ -1,5 +1,6 @@
 package com.mahdiMb55.prices.data.security
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -31,6 +32,8 @@ internal class JsonEncryptedTokenRecordCodec : EncryptedTokenRecordCodec {
                     null
                 }
             }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (_: Exception) {
             null
         }

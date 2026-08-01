@@ -51,10 +51,35 @@ class AndroidKeystoreTokenStorageTest {
         assertEquals(1, store.clearCalls)
     }
 
+    @Test fun malformedRecordCleanupFailureMapsToStorageFailure() = runTest {
+        val store = FakeStore(
+            read = TokenRecordReadResult.Present("bad"),
+            clearResult = TokenRecordClearResult.Failure,
+        )
+
+        val result = storage(store = store, codec = FakeCodec(record = null)).read()
+
+        assertSame(SecureTokenReadResult.StorageFailure, result)
+        assertEquals(1, store.clearCalls)
+        assertFalse(result.toString().contains("bad"))
+    }
+
     @Test fun authenticationFailureMapsToCorrupted() = runTest {
         val crypto = FakeCrypto(decryptResult = TokenDecryptionResult.AuthenticationFailure)
-        val result = storage(crypto = crypto).read()
+        val store = FakeStore()
+        val result = storage(crypto = crypto, store = store).read()
         assertSame(SecureTokenReadResult.Corrupted, result)
+        assertEquals(1, store.clearCalls)
+    }
+
+    @Test fun authenticationFailureCleanupFailureMapsToStorageFailure() = runTest {
+        val crypto = FakeCrypto(decryptResult = TokenDecryptionResult.AuthenticationFailure)
+        val store = FakeStore(clearResult = TokenRecordClearResult.Failure)
+
+        val result = storage(crypto = crypto, store = store).read()
+
+        assertSame(SecureTokenReadResult.StorageFailure, result)
+        assertEquals(1, store.clearCalls)
     }
 
     @Test fun missingAndUnavailableDecryptionKeysMapToKeyUnavailable() = runTest {
@@ -79,9 +104,30 @@ class AndroidKeystoreTokenStorageTest {
     }
 
     @Test fun cancellationsFromStoreCodecAndCryptoPropagate() = runTest {
-        assertCancellation { storage(store = FakeStore(readException = CancellationException())).read() }
-        assertCancellation { storage(codec = FakeCodec(decodeException = CancellationException())).read() }
-        assertCancellation { storage(crypto = FakeCrypto(decryptException = CancellationException())).read() }
+        val storeReadCancellation = CancellationException("store read cancellation")
+        val store = FakeStore(readException = storeReadCancellation)
+        assertSameCancellation(storeReadCancellation) { storage(store = store).read() }
+        assertEquals(0, store.clearCalls)
+
+        val codecCancellation = CancellationException("codec cancellation")
+        val codecStore = FakeStore()
+        assertSameCancellation(codecCancellation) {
+            storage(store = codecStore, codec = FakeCodec(decodeException = codecCancellation)).read()
+        }
+        assertEquals(0, codecStore.clearCalls)
+
+        val cryptoCancellation = CancellationException("crypto cancellation")
+        val cryptoStore = FakeStore()
+        val keys = FakeKeyProvider()
+        assertSameCancellation(cryptoCancellation) {
+            storage(
+                keys = keys,
+                store = cryptoStore,
+                crypto = FakeCrypto(decryptException = cryptoCancellation),
+            ).read()
+        }
+        assertEquals(0, cryptoStore.clearCalls)
+        assertEquals(0, keys.createCalls)
     }
 
     @Test fun readNeverUsesEncryptionKeyCreation() = runTest {
@@ -132,10 +178,35 @@ class AndroidKeystoreTokenStorageTest {
     }
 
     @Test fun writeCancellationPropagates() = runTest {
-        assertCancellation { storage(keys = FakeKeyProvider(createException = CancellationException())).write("token") }
-        assertCancellation { storage(crypto = FakeCrypto(encryptException = CancellationException())).write("token") }
-        assertCancellation { storage(codec = FakeCodec(encodeException = CancellationException())).write("token") }
-        assertCancellation { storage(store = FakeStore(writeException = CancellationException())).write("token") }
+        val keyCancellation = CancellationException("key cancellation")
+        assertSameCancellation(keyCancellation) {
+            storage(keys = FakeKeyProvider(createException = keyCancellation)).write("token")
+        }
+
+        val cryptoCancellation = CancellationException("crypto cancellation")
+        val cryptoStore = FakeStore()
+        assertSameCancellation(cryptoCancellation) {
+            storage(
+                crypto = FakeCrypto(encryptException = cryptoCancellation),
+                store = cryptoStore,
+            ).write("token")
+        }
+        assertEquals(0, cryptoStore.writes)
+
+        val codecCancellation = CancellationException("codec cancellation")
+        val codecStore = FakeStore()
+        assertSameCancellation(codecCancellation) {
+            storage(
+                codec = FakeCodec(encodeException = codecCancellation),
+                store = codecStore,
+            ).write("token")
+        }
+        assertEquals(0, codecStore.writes)
+
+        val storeCancellation = CancellationException("store write cancellation")
+        val store = FakeStore(writeException = storeCancellation)
+        assertSameCancellation(storeCancellation) { storage(store = store).write("token") }
+        assertEquals(1, store.writes)
     }
 
     @Test fun successfulAndFailedClearMapCorrectlyWithoutSecurityCalls() = runTest {
@@ -155,7 +226,10 @@ class AndroidKeystoreTokenStorageTest {
     }
 
     @Test fun clearCancellationPropagates() = runTest {
-        assertCancellation { storage(store = FakeStore(clearException = CancellationException())).clear() }
+        val cancellation = CancellationException("store clear cancellation")
+        val store = FakeStore(clearException = cancellation)
+        assertSameCancellation(cancellation) { storage(store = store).clear() }
+        assertEquals(1, store.clearCalls)
     }
 
     @Test fun operationsUseInjectedDispatcher() = runTest {
@@ -191,12 +265,15 @@ class AndroidKeystoreTokenStorageTest {
         recordCodec = codec,
     )
 
-    private suspend fun assertCancellation(block: suspend () -> Unit) {
+    private suspend fun assertSameCancellation(
+        expected: CancellationException,
+        block: suspend () -> Unit,
+    ) {
         try {
             block()
             throw AssertionError("Expected CancellationException")
-        } catch (expected: CancellationException) {
-            // Expected: cancellation is part of the storage contract.
+        } catch (actual: CancellationException) {
+            assertSame(expected, actual)
         }
     }
 }
@@ -253,12 +330,14 @@ private class FakeStore(
     private val clearException: RuntimeException? = null,
 ) : SecureTokenRecordStore {
     var writtenValue: String? = null
+    var writes = 0
     var clearCalls = 0
     override fun read(): TokenRecordReadResult {
         readException?.let { throw it }
         return read
     }
     override fun write(encodedRecord: String): TokenRecordWriteResult {
+        writes++
         writtenValue = encodedRecord
         writeException?.let { throw it }
         return writeResult

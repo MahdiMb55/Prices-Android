@@ -155,8 +155,10 @@ internal class AndroidKeystoreTokenStorage(
     }
 
     private fun clearAndMap(result: SecureTokenReadResult): SecureTokenReadResult {
-        recordStore.clear()
-        return result
+        return when (recordStore.clear()) {
+            TokenRecordClearResult.Success -> result
+            TokenRecordClearResult.Failure -> SecureTokenReadResult.StorageFailure
+        }
     }
 
     private fun encodeRecord(record: EncryptedTokenRecord): RecordEncoding = try {
