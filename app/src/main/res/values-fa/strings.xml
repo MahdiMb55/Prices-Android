@@ -25,7 +25,10 @@
     <string name="price_history_empty">پس از اتصال فروشگاه، تاریخچه قیمت اینجا نمایش داده می‌شود.</string>
     <string name="settings_title">تنظیمات</string>
     <string name="settings_description">تنظیمات اتصال و برنامه در مرحله بعدی اضافه می‌شوند.</string>
-    <string name="settings_version">کلاینت اندروید Prices · پوسته MVP</string>
+    <string name="application_information">اطلاعات برنامه</string>
+    <string name="app_version">نسخه برنامه</string>
+    <string name="version_code">کد نسخه</string>
+    <string name="package_name">نام بسته</string>
     <string name="navigate_back">بازگشت</string>
     <string name="sample_wireless_keyboard">صفحه‌کلید بی‌سیم</string>
     <string name="sample_sku_keyboard">SKU-1042</string>

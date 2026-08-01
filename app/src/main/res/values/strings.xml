@@ -25,7 +25,10 @@
     <string name="price_history_empty">Price history will appear here after the store is connected.</string>
     <string name="settings_title">Settings</string>
     <string name="settings_description">Connection and application preferences will be added later.</string>
-    <string name="settings_version">Prices Android client · MVP shell</string>
+    <string name="application_information">Application information</string>
+    <string name="app_version">App version</string>
+    <string name="version_code">Version code</string>
+    <string name="package_name">Package name</string>
     <string name="navigate_back">Back</string>
     <string name="sample_wireless_keyboard">Wireless keyboard</string>
     <string name="sample_sku_keyboard">SKU-1042</string>

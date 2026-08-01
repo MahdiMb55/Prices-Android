@@ -293,28 +293,3 @@ fun PriceHistoryScreen(onBack: () -> Unit) {
         }
     }
 }
-
-@Composable
-fun SettingsScreen(onBack: () -> Unit) {
-    Scaffold(
-        topBar = {
-            PricesTopAppBar(
-                title = stringResource(R.string.settings_title),
-                onBack = onBack,
-                backContentDescription = stringResource(R.string.navigate_back)
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(PricesSpacing.xl),
-            verticalArrangement = Arrangement.spacedBy(PricesSpacing.sm)
-        ) {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
-            Text(stringResource(R.string.settings_description), style = MaterialTheme.typography.bodyLarge)
-            Text(stringResource(R.string.settings_version), style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}

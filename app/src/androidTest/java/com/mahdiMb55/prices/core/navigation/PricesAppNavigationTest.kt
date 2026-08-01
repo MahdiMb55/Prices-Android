@@ -10,6 +10,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import com.mahdiMb55.prices.app.PricesApp
 import com.mahdiMb55.prices.core.designsystem.PricesTheme
+import com.mahdiMb55.prices.core.appinfo.AppInfo
+import com.mahdiMb55.prices.core.appinfo.AppInfoProvider
+import com.mahdiMb55.prices.core.di.AppContainer
 import org.junit.Rule
 import org.junit.Test
 
@@ -53,6 +56,8 @@ class PricesAppNavigationTest {
         composeRule.onNodeWithText("Preview App Shell").performClick()
         composeRule.onNodeWithContentDescription("Settings").performClick()
         composeRule.onNodeWithText("Settings").assertIsDisplayed()
+        composeRule.onNodeWithText("9.8.7").assertIsDisplayed()
+        composeRule.onNodeWithText("com.mahdiMb55.prices.test").assertIsDisplayed()
     }
 
     @Test
@@ -81,7 +86,7 @@ class PricesAppNavigationTest {
         composeRule.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 PricesTheme(darkTheme = false, dynamicColor = false) {
-                    PricesApp()
+                    PricesApp(appContainer = testAppContainer)
                 }
             }
         }
@@ -92,8 +97,19 @@ class PricesAppNavigationTest {
     private fun setAppContent() {
         composeRule.setContent {
             PricesTheme(darkTheme = false, dynamicColor = false) {
-                PricesApp()
+                PricesApp(appContainer = testAppContainer)
             }
+        }
+    }
+
+    private val testAppContainer = object : AppContainer {
+        override val appInfoProvider: AppInfoProvider = object : AppInfoProvider {
+            override val appInfo = AppInfo(
+                versionName = "9.8.7",
+                versionCode = 987L,
+                packageName = "com.mahdiMb55.prices.test",
+                isDebugBuild = true
+            )
         }
     }
 }

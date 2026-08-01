@@ -14,6 +14,8 @@ com.mahdiMb55.prices
 ├── core
 │   ├── designsystem
 │   ├── navigation
+│   ├── appinfo
+│   ├── di
 │   ├── common
 │   └── model
 ├── data
@@ -44,6 +46,14 @@ Create directories only when real code needs them. Do not introduce multi-module
 
 Use a domain use case when it represents reusable business policy, coordinates multiple repositories, or makes a ViewModel substantially clearer. Keep simple one-repository reads and writes in the repository/ViewModel path until that policy exists; do not create use-case classes ceremonially.
 
+## Dependency injection
+
+The MVP uses explicit constructor injection backed by one small application-scoped `AppContainer`. `PricesApplication` owns the container through the narrow `AppContainerOwner` contract, and `PricesApp` provides it at the navigation boundary. Only route-level composables may consume the typed composition local; leaf composables receive immutable UI state and callbacks. Feature ViewModels receive their individual dependencies through feature-specific `ViewModelProvider.Factory` implementations and must not know that the container exists.
+
+Hilt was evaluated, but the tested available Hilt Gradle plugins depend on the removed legacy Android `BaseExtension` integration and fail with the locked AGP 9.0.1 toolchain. AGP will not be downgraded solely to add Hilt. This explicit wiring is a small migration-friendly compatibility choice, not a permanent custom DI framework. Hilt may be reconsidered in a dedicated tooling-maintenance change after a compatible version is available and verified. See [ADR 0001](adr/0001-explicit-dependency-injection.md).
+
+Do not add generic dependency maps, reflection, runtime registration, global mutable singletons, or service-locator access. Add bindings only when a real dependency is implemented. Dispatcher injection begins when asynchronous data work creates a genuine testability boundary; no dispatcher abstraction exists for synchronous app metadata.
+
 Repositories expose suspend operations and/or `Flow`/`StateFlow`-friendly streams. ViewModels own screen state and transform repository results into immutable UI state. Activities and Views must not be retained by ViewModels or repositories.
 
 ## Planned product capabilities
@@ -65,6 +75,8 @@ The navigation shell starts at onboarding on every launch. This is an explicit t
 ## Tooling and platform constraints
 
 Preserve the current package/application ID, minSdk 26, compileSdk 36, targetSdk 36, Kotlin 2.0.21, AGP 9.0.1, Gradle 9.1.0, and Compose BOM 2024.09.00 unless explicitly approved otherwise. The current build requires JDK 17 or newer; JDK 22 is the verified local development JDK.
+
+The Compose BOM remains `2024.09.00`, while Compose instrumentation-test artifacts are explicitly pinned to `1.9.2` to keep the current suite executable. A future dedicated tooling-maintenance change should align the Compose dependency set consistently; feature commits must not adjust this compatibility pin opportunistically.
 
 ## Commit strategy
 

@@ -7,6 +7,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 import org.junit.Assert.*
+import com.mahdiMb55.prices.core.di.AppContainerOwner
 
 /**
  * Instrumented test, which will execute on an Android device.
@@ -16,9 +17,14 @@ import org.junit.Assert.*
 @RunWith(AndroidJUnit4::class)
 class ExampleInstrumentedTest {
     @Test
-    fun useAppContext() {
-        // Context of the app under test.
-        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.mahdiMb55.prices", appContext.packageName)
+    fun runtimeApplicationOwnsAvailableAppContainer() {
+        val appContext = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
+
+        assertTrue(appContext is PricesApplication)
+        assertTrue(appContext is AppContainerOwner)
+        val appInfo = (appContext as AppContainerOwner).appContainer.appInfoProvider.appInfo
+        assertEquals("com.mahdiMb55.prices", appInfo.packageName)
+        assertTrue(appInfo.versionName.isNotBlank())
+        assertTrue(appInfo.versionCode >= 0L)
     }
 }
