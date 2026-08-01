@@ -56,6 +56,16 @@ Do not add generic dependency maps, reflection, runtime registration, global mut
 
 Repositories expose suspend operations and/or `Flow`/`StateFlow`-friendly streams. ViewModels own screen state and transform repository results into immutable UI state. Activities and Views must not be retained by ViewModels or repositories.
 
+## Networking foundation
+
+`data.remote` owns the reusable transport boundary for the custom Prices API. Retrofit and OkHttp use Kotlin serialization with `ignoreUnknownKeys = true`; API DTOs remain transport-only and must be mapped before any future domain or UI use. The sole currently defined contract is discovery at `GET /wp-json/prices/v1/discovery`.
+
+Store URLs are runtime input, never a global production base URL. `StoreUrlNormalizer` accepts only `http` or `https` URLs with a host, rejects credentials, queries, fragments, malformed input, and paths after the API namespace, and produces a canonical `.../wp-json/prices/v1/` base while preserving a WordPress subdirectory and non-default port. HTTPS is the production default; release cleartext remains disabled and local HTTP use is limited to JVM MockWebServer tests.
+
+`PricesApiFactory` creates a client only from a validated base URL, uses explicit finite timeouts, and does not perform work during construction. `AppContainer` exposes that factory rather than an active-store client. A synchronous in-memory `AccessTokenProvider` is the only authentication foundation: interceptors may add a non-blank bearer token but must never read disk, DataStore, keystore, or suspend state. Future pairing updates the in-memory source outside interception.
+
+Network failures preserve HTTP status and stable backend error codes without parsing human-readable messages. `NetworkRequestExecutor` rethrows cancellation, does not retry, and maps connectivity, timeout, TLS, HTTP, authentication, permission, validation, conflict, server, serialization, and unknown failures into `NetworkResult`. HTTP logging is not installed; authorization headers, pairing codes, tokens, and response bodies must never be logged.
+
 ## Planned product capabilities
 
 The MVP will grow toward pairing, product search, product and variation price editing, conflict handling, and price-history display. Pairing and authentication details must use the Prices plugin contract, not assumptions from the generic WooCommerce API.

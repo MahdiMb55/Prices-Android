@@ -26,5 +26,7 @@ class ExampleInstrumentedTest {
         assertEquals("com.mahdiMb55.prices", appInfo.packageName)
         assertTrue(appInfo.versionName.isNotBlank())
         assertTrue(appInfo.versionCode >= 0L)
+        val appContainer = (appContext as AppContainerOwner).appContainer
+        assertSame(appContainer.pricesApiFactory, appContainer.pricesApiFactory)
     }
 }

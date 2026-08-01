@@ -13,6 +13,8 @@ import com.mahdiMb55.prices.core.designsystem.PricesTheme
 import com.mahdiMb55.prices.core.appinfo.AppInfo
 import com.mahdiMb55.prices.core.appinfo.AppInfoProvider
 import com.mahdiMb55.prices.core.di.AppContainer
+import com.mahdiMb55.prices.data.remote.NoTokenAccessTokenProvider
+import com.mahdiMb55.prices.data.remote.PricesApiFactory
 import org.junit.Rule
 import org.junit.Test
 
@@ -103,6 +105,7 @@ class PricesAppNavigationTest {
     }
 
     private val testAppContainer = object : AppContainer {
+        override val pricesApiFactory = PricesApiFactory(NoTokenAccessTokenProvider)
         override val appInfoProvider: AppInfoProvider = object : AppInfoProvider {
             override val appInfo = AppInfo(
                 versionName = "9.8.7",
