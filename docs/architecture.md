@@ -50,6 +50,10 @@ Repositories expose suspend operations and/or `Flow`/`StateFlow`-friendly stream
 
 The MVP will grow toward pairing, product search, product and variation price editing, conflict handling, and price-history display. Pairing and authentication details must use the Prices plugin contract, not assumptions from the generic WooCommerce API.
 
+## Current startup rule
+
+The navigation shell starts at onboarding on every launch. This is an explicit temporary rule; the real startup decision will later depend on secure connection storage and must not be represented by fake authentication or persistent connection state in the shell.
+
 ## Testing strategy
 
 - Unit-test price rules, DTO mapping, conflict decisions, and ViewModel state transitions.

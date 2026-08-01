@@ -4,10 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.mahdiMb55.prices.core.designsystem.DesignSystemShowcase
+import com.mahdiMb55.prices.app.PricesApp
 import com.mahdiMb55.prices.core.designsystem.PricesTheme
 
 class MainActivity : ComponentActivity() {
@@ -16,16 +13,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PricesTheme {
-                DesignSystemShowcase()
+                PricesApp()
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DesignSystemPreview() {
-    PricesTheme {
-        DesignSystemShowcase()
     }
 }
