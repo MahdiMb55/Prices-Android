@@ -42,3 +42,37 @@ internal data class ApiErrorDto(
     val details: JsonElement,
     @SerialName("request_id") val requestId: String
 )
+
+@Serializable
+data class PairingExchangeRequestDto(
+    @SerialName("pairing_code") val pairingCode: String,
+    @SerialName("device_name") val deviceName: String,
+    @SerialName("device_identifier") val deviceIdentifier: String,
+    @SerialName("app_version") val appVersion: String,
+    @SerialName("android_version") val androidVersion: String
+)
+
+@Serializable
+data class PairingExchangeEnvelopeDto(val data: PairingExchangeDataDto) {
+    override fun toString(): String = "PairingExchangeEnvelopeDto(data=redacted)"
+}
+
+@Serializable
+data class PairingExchangeDataDto(
+    @SerialName("device_id") val deviceId: String,
+    @SerialName("token_type") val tokenType: String,
+    @SerialName("device_token") val deviceToken: String,
+    @SerialName("authentication_method") val authenticationMethod: String
+) {
+    override fun toString(): String = "PairingExchangeDataDto(deviceId=$deviceId, tokenType=$tokenType, deviceToken=redacted, authenticationMethod=$authenticationMethod)"
+}
+
+@Serializable
+data class CurrentSessionEnvelopeDto(val data: CurrentSessionDataDto)
+
+@Serializable
+data class CurrentSessionDataDto(
+    @SerialName("user_id") val userId: Long,
+    @SerialName("device_id") val deviceId: String,
+    @SerialName("authentication_method") val authenticationMethod: String
+)

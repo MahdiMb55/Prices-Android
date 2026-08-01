@@ -23,13 +23,15 @@ import androidx.navigation.navArgument
 import com.mahdiMb55.prices.core.di.AppContainer
 import com.mahdiMb55.prices.core.di.LocalAppContainer
 import com.mahdiMb55.prices.core.navigation.PricesDestination
-import com.mahdiMb55.prices.feature.connection.DiscoveredStoreScreen
+import com.mahdiMb55.prices.feature.connection.PairingRoute
 import com.mahdiMb55.prices.feature.connection.OnboardingRoute
 import com.mahdiMb55.prices.feature.onboarding.OnboardingViewModelFactory
 import com.mahdiMb55.prices.feature.startup.StartupDestination
 import com.mahdiMb55.prices.feature.startup.StartupUiState
 import com.mahdiMb55.prices.feature.startup.StartupViewModel
 import com.mahdiMb55.prices.feature.startup.StartupViewModelFactory
+import com.mahdiMb55.prices.feature.pairing.PairingViewModelFactory
+import com.mahdiMb55.prices.data.session.SessionState
 import com.mahdiMb55.prices.feature.shell.PriceEditScreen
 import com.mahdiMb55.prices.feature.shell.PriceHistoryScreen
 import com.mahdiMb55.prices.feature.shell.ProductDetailScreen
@@ -84,21 +86,26 @@ fun PricesApp(
                 val connection by appContainer.connectionPreferences.connection.collectAsStateWithLifecycle(initialValue = null)
                 val scope = rememberCoroutineScope()
                 connection?.let { discovered ->
-                    DiscoveredStoreScreen(
-                        connection = discovered,
+                    PairingRoute(
+                        factory = PairingViewModelFactory(appContainer.pairingRepository, discovered),
                         onChangeStore = {
                             scope.launch {
+                                appContainer.pairingRepository.clearSession()
                                 appContainer.connectionPreferences.clear()
                                 navController.navigate(PricesDestination.Onboarding.route) {
                                     popUpTo(PricesDestination.Pairing.route) { inclusive = true }
                                 }
                             }
-                        }
+                        },
+                        onSuccess = { navController.navigate(PricesDestination.Products.route) { popUpTo(PricesDestination.Pairing.route) { inclusive = true } } }
                     )
                 }
             }
             composable(PricesDestination.Products.route) {
-                ProductsScreen(
+                val session by appContainer.sessionStore.state.collectAsStateWithLifecycle()
+                if (session !is SessionState.Authenticated) {
+                    LaunchedEffect(session) { navController.navigate(PricesDestination.Pairing.route) { popUpTo(PricesDestination.Products.route) { inclusive = true } } }
+                } else ProductsScreen(
                     onBack = { navController.popBackStack() },
                     onProductClick = { id -> navController.navigate(PricesDestination.productDetail(id)) },
                     onPriceHistory = { navController.navigate(PricesDestination.PriceHistory.route) },

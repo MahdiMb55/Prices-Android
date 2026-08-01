@@ -7,19 +7,28 @@ interface AccessTokenProvider {
     fun currentToken(): String?
 }
 
+interface MutableAccessTokenStore : AccessTokenProvider {
+    fun updateToken(token: String?)
+    fun clear()
+}
+
 object NoTokenAccessTokenProvider : AccessTokenProvider {
     override fun currentToken(): String? = null
 }
 
-class InMemoryAccessTokenProvider(initialToken: String? = null) : AccessTokenProvider {
+class InMemoryAccessTokenProvider(initialToken: String? = null) : MutableAccessTokenStore {
     @Volatile
     private var token: String? = initialToken
 
     override fun currentToken(): String? = token
 
-    fun update(token: String?) {
+    override fun updateToken(token: String?) {
         this.token = token
     }
+
+    fun update(token: String?) = updateToken(token)
+
+    override fun clear() { token = null }
 
     override fun toString(): String = "InMemoryAccessTokenProvider(redacted)"
 }

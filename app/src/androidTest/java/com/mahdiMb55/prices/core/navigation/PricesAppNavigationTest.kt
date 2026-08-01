@@ -19,7 +19,13 @@ import com.mahdiMb55.prices.data.local.connection.ConnectionPreferences
 import com.mahdiMb55.prices.data.local.connection.StoredConnection
 import com.mahdiMb55.prices.data.remote.NoTokenAccessTokenProvider
 import com.mahdiMb55.prices.data.remote.PricesApiFactory
+import com.mahdiMb55.prices.data.remote.InMemoryAccessTokenProvider
+import com.mahdiMb55.prices.data.remote.MutableAccessTokenStore
 import com.mahdiMb55.prices.data.repository.StoreDiscoveryRepository
+import com.mahdiMb55.prices.data.repository.PairingRepository
+import com.mahdiMb55.prices.data.repository.PairingResult
+import com.mahdiMb55.prices.data.session.InMemorySessionStore
+import com.mahdiMb55.prices.data.session.SessionStore
 import com.mahdiMb55.prices.data.repository.StoreDiscoveryResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +44,6 @@ class PricesAppNavigationTest {
     @Test
     fun discoveredSnapshotStartsDiscoveredStoreScreen() {
         setAppContent(FakeConnectionPreferences(discoveredConnection()))
-        composeRule.onNodeWithText("Store discovered").assertIsDisplayed()
         composeRule.onNodeWithText("Status: Discovered").assertIsDisplayed()
     }
 
@@ -59,10 +64,16 @@ class PricesAppNavigationTest {
     }
 
     private fun testAppContainer(preferences: ConnectionPreferences) = object : AppContainer {
-        override val pricesApiFactory = PricesApiFactory(NoTokenAccessTokenProvider)
+        override val accessTokenStore: MutableAccessTokenStore = InMemoryAccessTokenProvider()
+        override val sessionStore: SessionStore = InMemorySessionStore()
+        override val pricesApiFactory = PricesApiFactory(accessTokenStore)
         override val connectionPreferences = preferences
         override val storeDiscoveryRepository = object : StoreDiscoveryRepository {
             override suspend fun discover(urlInput: String): StoreDiscoveryResult = error("Not used by this test")
+        }
+        override val pairingRepository = object : PairingRepository {
+            override suspend fun exchange(pairingCode: String, deviceName: String): PairingResult = error("Not used by this test")
+            override fun clearSession() = Unit
         }
         override val appInfoProvider: AppInfoProvider = object : AppInfoProvider {
             override val appInfo = AppInfo("9.8.7", 987L, "com.mahdiMb55.prices.test", true)

@@ -10,10 +10,12 @@ The Android client communicates only with the custom Prices WordPress namespace:
 
 It is not a generic WooCommerce REST client. Android never stores or sends WooCommerce consumer keys or secrets. A device bearer token will be issued by a future pairing flow; pairing is not implemented by this networking foundation.
 
-The only implemented Retrofit contract is discovery:
+Implemented Retrofit contracts are discovery, manual pairing exchange, and protected current-session verification:
 
 ```text
 GET /wp-json/prices/v1/discovery
+POST /wp-json/prices/v1/pairing/exchange
+GET /wp-json/prices/v1/auth/me
 ```
 
 The response is represented by transport DTOs only. Discovery fields such as plugin/API versions, availability, authentication capabilities, feature keys, site metadata, and currency are not UI models. Unknown JSON fields are tolerated so compatible server additions do not break decoding; required known fields still fail decoding when absent.

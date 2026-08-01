@@ -29,8 +29,13 @@ import com.mahdiMb55.prices.core.designsystem.PricesSpacing
 import com.mahdiMb55.prices.core.navigation.PricesTopAppBar
 import com.mahdiMb55.prices.data.local.connection.StoredConnection
 import com.mahdiMb55.prices.data.repository.StoreDiscoveryFailure
+import com.mahdiMb55.prices.data.repository.PairingCodeFormat
+import com.mahdiMb55.prices.data.repository.PairingFailure
 import com.mahdiMb55.prices.feature.onboarding.OnboardingViewModel
 import com.mahdiMb55.prices.feature.onboarding.OnboardingViewModelFactory
+import com.mahdiMb55.prices.feature.pairing.PairingViewModel
+import com.mahdiMb55.prices.feature.pairing.PairingViewModelFactory
+import com.mahdiMb55.prices.feature.pairing.PairingUiState
 
 @Composable
 fun OnboardingRoute(
@@ -86,29 +91,71 @@ private fun OnboardingScreen(
 }
 
 @Composable
-fun DiscoveredStoreScreen(
-    connection: StoredConnection,
+fun PairingRoute(
+    factory: PairingViewModelFactory,
+    onChangeStore: () -> Unit,
+    onSuccess: () -> Unit
+) {
+    val viewModel: PairingViewModel = viewModel(factory = factory)
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(state.success) { if (state.success) { viewModel.consumeSuccess(); onSuccess() } }
+    PairingScreen(state, viewModel::updateCode, viewModel::updateDeviceName, viewModel::submit, onChangeStore)
+}
+
+@Composable
+private fun PairingScreen(
+    state: PairingUiState,
+    onCodeChange: (String) -> Unit,
+    onNameChange: (String) -> Unit,
+    onSubmit: () -> Unit,
     onChangeStore: () -> Unit
 ) {
-    Scaffold(topBar = { PricesTopAppBar(title = stringResource(R.string.discovered_store_title)) }) { padding ->
+    Scaffold(topBar = { PricesTopAppBar(title = stringResource(R.string.manual_pairing_title)) }) { padding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).padding(PricesSpacing.xl),
             verticalArrangement = Arrangement.spacedBy(PricesSpacing.md)
         ) {
-            Text(stringResource(R.string.discovered_store_description), style = MaterialTheme.typography.bodyLarge)
-            Text(connection.siteName, style = MaterialTheme.typography.titleLarge)
-            Text(connection.siteUrl, style = androidx.compose.ui.text.TextStyle(textDirection = TextDirection.Ltr))
+            Text(stringResource(R.string.pairing_code_help), style = MaterialTheme.typography.bodyLarge)
+            state.connection?.let { connection ->
+                Text(connection.siteName, style = MaterialTheme.typography.titleLarge)
+                Text(connection.siteUrl, style = androidx.compose.ui.text.TextStyle(textDirection = TextDirection.Ltr))
+            }
             Text(stringResource(R.string.discovery_status_discovered), style = MaterialTheme.typography.labelLarge)
-            if (connection.minimumAppVersionWarning != null) {
+            if (state.connection?.minimumAppVersionWarning != null) {
                 Text(stringResource(R.string.minimum_version_warning), color = MaterialTheme.colorScheme.error)
             }
-            Spacer(Modifier.weight(1f))
+            OutlinedTextField(value = PairingCodeFormat.display(state.pairingCode), onValueChange = onCodeChange,
+                label = { Text(stringResource(R.string.pairing_code)) }, singleLine = true,
+                isError = state.failure == PairingFailure.InvalidCodeFormat || state.failure == PairingFailure.InvalidOrExpiredCode,
+                textStyle = androidx.compose.ui.text.TextStyle(textDirection = TextDirection.Ltr), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = state.deviceName, onValueChange = onNameChange, label = { Text(stringResource(R.string.device_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            state.failure?.let { Text(pairingErrorText(it), color = MaterialTheme.colorScheme.error) }
+            Button(onClick = onSubmit, enabled = state.canSubmit, modifier = Modifier.fillMaxWidth()) {
+                if (state.isSubmitting) CircularProgressIndicator(modifier = Modifier.height(18.dp)) else Text(stringResource(R.string.connect_device))
+            }
             OutlinedButton(onClick = onChangeStore, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.change_store))
             }
         }
     }
 }
+
+@Composable
+private fun pairingErrorText(failure: PairingFailure): String = stringResource(when (failure) {
+    PairingFailure.InvalidCodeFormat -> R.string.pairing_error_format
+    PairingFailure.InvalidOrExpiredCode -> R.string.pairing_error_invalid_or_expired
+    PairingFailure.TooManyAttempts -> R.string.pairing_error_too_many_attempts
+    PairingFailure.PairingDisabled -> R.string.pairing_error_disabled
+    PairingFailure.DeviceLimitReached -> R.string.pairing_error_device_limit
+    PairingFailure.PermissionDenied -> R.string.pairing_error_permission
+    PairingFailure.NetworkUnavailable -> R.string.pairing_error_network
+    PairingFailure.Timeout -> R.string.pairing_error_timeout
+    PairingFailure.TlsFailure -> R.string.pairing_error_tls
+    PairingFailure.ServerError -> R.string.pairing_error_server
+    PairingFailure.InvalidResponse -> R.string.pairing_error_response
+    PairingFailure.VerificationFailed -> R.string.pairing_error_verification
+    else -> R.string.pairing_error_generic
+})
 
 @Composable
 private fun discoveryErrorText(failure: StoreDiscoveryFailure): String = stringResource(
