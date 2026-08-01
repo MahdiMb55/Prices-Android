@@ -90,8 +90,7 @@ fun PricesApp(
                         factory = PairingViewModelFactory(appContainer.pairingRepository, discovered),
                         onChangeStore = {
                             scope.launch {
-                                appContainer.pairingRepository.clearSession()
-                                appContainer.connectionPreferences.clear()
+                                appContainer.pairingRepository.clearForStoreChange()
                                 navController.navigate(PricesDestination.Onboarding.route) {
                                     popUpTo(PricesDestination.Pairing.route) { inclusive = true }
                                 }
@@ -143,7 +142,18 @@ fun PricesApp(
                 PriceHistoryScreen(onBack = { navController.popBackStack() })
             }
             composable(PricesDestination.Settings.route) {
-                SettingsRoute(onBack = { navController.popBackStack() })
+                val scope = rememberCoroutineScope()
+                SettingsRoute(
+                    onBack = { navController.popBackStack() },
+                    onDisconnect = {
+                        scope.launch {
+                            appContainer.pairingRepository.clearSession()
+                            navController.navigate(PricesDestination.Pairing.route) {
+                                popUpTo(PricesDestination.Products.route) { inclusive = true }
+                            }
+                        }
+                    },
+                )
             }
         }
     }

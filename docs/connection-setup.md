@@ -6,4 +6,4 @@ Only a validated discovery response is persisted. Validation requires the confir
 
 `minimum_app_version` uses numeric dotted comparison. A malformed server value is non-blocking, remains stored as the original value, and is exposed through `minimumAppVersionWarning` for diagnostics. It is never treated as an app-update requirement.
 
-There is one cancellable discovery request per onboarding screen. A newer request cancels the old one and stale results cannot update UI or persistence. There are no retries and cancellation propagates unchanged.
+There is one cancellable discovery request per onboarding screen. A newer request cancels the old one and stale results cannot update UI or persistence. There are no retries and cancellation propagates unchanged. Discovery persists only the non-sensitive `StoredConnection`; paired-session metadata and the encrypted token use separate Phase B boundaries. Change Store clears all local session state before clearing this discovered snapshot.

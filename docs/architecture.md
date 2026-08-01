@@ -74,7 +74,7 @@ The MVP will grow toward pairing, product search, product and variation price ed
 
 The app asynchronously reads one non-sensitive DataStore snapshot at startup. An absent, corrupted, or unsupported snapshot starts onboarding. A valid `Discovered` snapshot starts the pairing destination, which displays only safe store metadata and explicitly does not imply authentication. Products and authenticated startup states do not exist yet.
 
-The snapshot has an explicit schema version and contains no tokens, pairing codes, credentials, headers, or raw discovery JSON. Change Store clears only this discovered snapshot. Real pairing and secure storage remain future work.
+The snapshot has an explicit schema version and contains no tokens, pairing codes, credentials, headers, or raw discovery JSON. Pairing metadata is persisted separately from this snapshot and the encrypted token. Change Store clears the local session records before clearing this discovered snapshot. Startup restoration of paired metadata and secure tokens is explicitly deferred.
 
 ## Testing strategy
 

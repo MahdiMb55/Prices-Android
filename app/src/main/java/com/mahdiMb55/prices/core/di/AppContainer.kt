@@ -16,6 +16,12 @@ import com.mahdiMb55.prices.data.repository.DefaultStoreDiscoveryRepository
 import com.mahdiMb55.prices.data.repository.StoreDiscoveryRepository
 import com.mahdiMb55.prices.data.repository.DefaultPairingRepository
 import com.mahdiMb55.prices.data.repository.PairingRepository
+import com.mahdiMb55.prices.data.repository.DefaultSecureSessionRepository
+import com.mahdiMb55.prices.data.repository.SecureSessionRepository
+import com.mahdiMb55.prices.data.local.session.DataStorePairedSessionMetadataPreferences
+import com.mahdiMb55.prices.data.local.session.PairedSessionMetadataPreferences
+import com.mahdiMb55.prices.data.security.AndroidKeystoreTokenStorage
+import com.mahdiMb55.prices.data.security.SecureTokenStorage
 import com.mahdiMb55.prices.data.session.InMemorySessionStore
 import com.mahdiMb55.prices.data.session.SessionStore
 
@@ -26,6 +32,9 @@ interface AppContainer {
     val storeDiscoveryRepository: StoreDiscoveryRepository
     val accessTokenStore: MutableAccessTokenStore
     val sessionStore: SessionStore
+    val secureTokenStorage: SecureTokenStorage
+    val pairedSessionMetadataPreferences: PairedSessionMetadataPreferences
+    val secureSessionRepository: SecureSessionRepository
     val pairingRepository: PairingRepository
 }
 
@@ -37,8 +46,18 @@ class DefaultAppContainer(application: Application) : AppContainer {
     override val appInfoProvider: AppInfoProvider = AndroidAppInfoProvider(application)
     override val accessTokenStore: MutableAccessTokenStore = InMemoryAccessTokenProvider()
     override val sessionStore: SessionStore = InMemorySessionStore()
-    override val pricesApiFactory: PricesApiFactory = PricesApiFactory(accessTokenStore)
     override val connectionPreferences: ConnectionPreferences = DataStoreConnectionPreferences(application)
+    override val secureTokenStorage: SecureTokenStorage = AndroidKeystoreTokenStorage(application)
+    override val pairedSessionMetadataPreferences: PairedSessionMetadataPreferences =
+        DataStorePairedSessionMetadataPreferences(application)
+    override val secureSessionRepository: SecureSessionRepository = DefaultSecureSessionRepository(
+        secureTokenStorage = secureTokenStorage,
+        metadataPreferences = pairedSessionMetadataPreferences,
+        tokenStore = accessTokenStore,
+        sessionStore = sessionStore,
+        connectionPreferences = connectionPreferences,
+    )
+    override val pricesApiFactory: PricesApiFactory = PricesApiFactory(accessTokenStore)
     override val storeDiscoveryRepository: StoreDiscoveryRepository = DefaultStoreDiscoveryRepository(
         pricesApiFactory = pricesApiFactory,
         networkRequestExecutor = NetworkRequestExecutor(ApiErrorParser()),
@@ -47,7 +66,12 @@ class DefaultAppContainer(application: Application) : AppContainer {
         now = { System.currentTimeMillis() }
     )
     override val pairingRepository: PairingRepository = DefaultPairingRepository(
-        connectionPreferences, pricesApiFactory, NetworkRequestExecutor(ApiErrorParser()), accessTokenStore,
-        sessionStore, appInfoProvider, Build.VERSION.RELEASE ?: "Android"
+        connectionPreferences = connectionPreferences,
+        pricesApiFactory = pricesApiFactory,
+        executor = NetworkRequestExecutor(ApiErrorParser()),
+        tokenStore = accessTokenStore,
+        secureSessionRepository = secureSessionRepository,
+        appInfoProvider = appInfoProvider,
+        androidVersion = Build.VERSION.RELEASE ?: "Android",
     )
 }

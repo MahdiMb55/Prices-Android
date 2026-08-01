@@ -20,6 +20,8 @@ Do not use `runBlocking`, `Thread.sleep`, `Future.get`, blocking joins, main-thr
 
 Do not create nested coroutine scopes without a clearly documented owner and cancellation policy.
 
+Secure-session persistence uses structured suspend operations. Pairing writes are ordered token, metadata, then in-memory session establishment; rollback is best-effort but classified. Disconnect and Change Store clear the in-memory token before persistent records. Cancellation is rethrown during writes and cleanup, and no storage is accessed by the authentication interceptor.
+
 ## Search and mutation workflows
 
 Search must be debounced, cancellable, and scoped to the active screen. A newer query must be able to supersede an older request without leaking work.

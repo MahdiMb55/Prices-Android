@@ -154,6 +154,7 @@ private fun pairingErrorText(failure: PairingFailure): String = stringResource(w
     PairingFailure.ServerError -> R.string.pairing_error_server
     PairingFailure.InvalidResponse -> R.string.pairing_error_response
     PairingFailure.VerificationFailed -> R.string.pairing_error_verification
+    PairingFailure.SecureSessionSaveFailed -> R.string.pairing_error_secure_session_save
     else -> R.string.pairing_error_generic
 })
 

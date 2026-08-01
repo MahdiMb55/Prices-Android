@@ -2,6 +2,7 @@ package com.mahdiMb55.prices.data.repository
 
 import com.mahdiMb55.prices.core.appinfo.AppInfoProvider
 import com.mahdiMb55.prices.data.local.connection.ConnectionPreferences
+import com.mahdiMb55.prices.data.local.session.StoredPairedSessionMetadata
 import com.mahdiMb55.prices.data.remote.MutableAccessTokenStore
 import com.mahdiMb55.prices.data.remote.NetworkError
 import com.mahdiMb55.prices.data.remote.NetworkErrorCategory
@@ -12,12 +13,12 @@ import com.mahdiMb55.prices.data.remote.PricesApiFactory
 import com.mahdiMb55.prices.data.remote.StoreUrlNormalizationResult
 import com.mahdiMb55.prices.data.remote.StoreUrlNormalizer
 import com.mahdiMb55.prices.data.session.PairedSession
-import com.mahdiMb55.prices.data.session.SessionStore
 import kotlinx.coroutines.flow.first
 
 interface PairingRepository {
     suspend fun exchange(pairingCode: String, deviceName: String): PairingResult
-    fun clearSession()
+    suspend fun clearSession(): SessionCleanupResult
+    suspend fun clearForStoreChange(): SessionCleanupResult
 }
 
 sealed interface PairingResult {
@@ -28,7 +29,7 @@ sealed interface PairingResult {
 enum class PairingFailure {
     NoDiscoveredStore, InvalidCodeFormat, InvalidOrExpiredCode, TooManyAttempts,
     PairingDisabled, DeviceLimitReached, PermissionDenied, NetworkUnavailable, Timeout,
-    TlsFailure, ServerError, InvalidResponse, VerificationFailed, Unknown
+    TlsFailure, ServerError, InvalidResponse, VerificationFailed, SecureSessionSaveFailed, Unknown
 }
 
 class DefaultPairingRepository(
@@ -36,12 +37,13 @@ class DefaultPairingRepository(
     private val pricesApiFactory: PricesApiFactory,
     private val executor: NetworkRequestExecutor,
     private val tokenStore: MutableAccessTokenStore,
-    private val sessionStore: SessionStore,
+    private val secureSessionRepository: SecureSessionRepository,
     private val appInfoProvider: AppInfoProvider,
-    private val androidVersion: String
+    private val androidVersion: String,
+    private val now: () -> Long = { System.currentTimeMillis() },
 ) : PairingRepository {
     override suspend fun exchange(pairingCode: String, deviceName: String): PairingResult {
-        clearSession()
+        secureSessionRepository.clearInMemorySession()
         if (!PairingCodeFormat.isValid(pairingCode)) return PairingResult.Failure(PairingFailure.InvalidCodeFormat)
         val connection = connectionPreferences.connection.first() ?: return PairingResult.Failure(PairingFailure.NoDiscoveredStore)
         val baseUrl = StoreUrlNormalizer.normalize(connection.apiBaseUrl)
@@ -59,15 +61,32 @@ class DefaultPairingRepository(
         tokenStore.updateToken(exchange.deviceToken)
         val verification = executor.execute { pricesApiFactory.create(baseUrl.baseUrl).currentSession() }
         if (verification !is NetworkResult.Success || verification.value.data.deviceId != exchange.deviceId || verification.value.data.authenticationMethod != "device_token") {
-            clearSession()
+            secureSessionRepository.clearInMemorySession()
             return PairingResult.Failure(PairingFailure.VerificationFailed)
         }
         val session = PairedSession(exchange.deviceId, deviceName.trim(), verification.value.data.userId, connection)
-        sessionStore.authenticate(session)
-        return PairingResult.Success(session)
+        val metadata = StoredPairedSessionMetadata(
+            deviceId = exchange.deviceId,
+            deviceName = deviceName.trim(),
+            userId = verification.value.data.userId,
+            authenticationMethod = exchange.authenticationMethod,
+            tokenType = exchange.tokenType,
+            capabilities = connection.authenticationCapabilities,
+            pairedAtEpochMillis = now(),
+            connectionApiBaseUrl = connection.apiBaseUrl,
+        )
+        return when (secureSessionRepository.persistVerifiedSession(exchange.deviceToken, metadata, session)) {
+            PersistSessionResult.Success -> PairingResult.Success(session)
+            PersistSessionResult.SecureTokenWriteFailed,
+            PersistSessionResult.MetadataWriteFailed,
+            PersistSessionResult.RollbackFailed,
+            PersistSessionResult.Unknown -> PairingResult.Failure(PairingFailure.SecureSessionSaveFailed)
+        }
     }
 
-    override fun clearSession() { tokenStore.clear(); sessionStore.clear() }
+    override suspend fun clearSession(): SessionCleanupResult = secureSessionRepository.clearLocalSession()
+
+    override suspend fun clearForStoreChange(): SessionCleanupResult = secureSessionRepository.clearAllForStoreChange()
 
     private fun NetworkResult.Failure.asFailure(): PairingResult.Failure = PairingResult.Failure(
         when (error.apiCode) {

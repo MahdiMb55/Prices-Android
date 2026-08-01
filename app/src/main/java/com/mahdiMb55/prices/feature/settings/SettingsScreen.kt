@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -24,18 +25,19 @@ import com.mahdiMb55.prices.core.di.LocalAppContainer
 import com.mahdiMb55.prices.core.navigation.PricesTopAppBar
 
 @Composable
-fun SettingsRoute(onBack: () -> Unit) {
+fun SettingsRoute(onBack: () -> Unit, onDisconnect: () -> Unit) {
     val appInfoProvider = LocalAppContainer.current.appInfoProvider
     val factory = remember(appInfoProvider) { SettingsViewModelFactory(appInfoProvider) }
     val viewModel: SettingsViewModel = viewModel(factory = factory)
 
-    SettingsScreen(uiState = viewModel.uiState, onBack = onBack)
+    SettingsScreen(uiState = viewModel.uiState, onBack = onBack, onDisconnect = onDisconnect)
 }
 
 @Composable
 fun SettingsScreen(
     uiState: SettingsUiState,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onDisconnect: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -73,6 +75,9 @@ fun SettingsScreen(
                 label = stringResource(R.string.package_name),
                 value = uiState.packageName
             )
+            OutlinedButton(onClick = onDisconnect, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.disconnect_app_session))
+            }
         }
     }
 }
