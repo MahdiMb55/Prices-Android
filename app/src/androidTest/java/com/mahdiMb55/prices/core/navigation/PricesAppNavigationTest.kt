@@ -8,6 +8,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
+import com.mahdiMb55.prices.app.PricesApp
 import com.mahdiMb55.prices.core.designsystem.PricesTheme
 import org.junit.Rule
 import org.junit.Test
@@ -41,7 +42,7 @@ class PricesAppNavigationTest {
         setAppContent()
 
         composeRule.onNodeWithText("Preview App Shell").performClick()
-        composeRule.onNodeWithContentDescription("Price history").performClick()
+        composeRule.onNodeWithText("Price history").performClick()
         composeRule.onNodeWithText("Price history").assertIsDisplayed()
     }
 
