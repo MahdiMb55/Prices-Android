@@ -63,6 +63,11 @@
     <string name="version_code">Version code</string>
     <string name="package_name">Package name</string>
     <string name="disconnect_app_session">Disconnect this app session</string>
+    <string name="startup_verification_failure">We could not verify this device right now.</string>
+    <string name="startup_storage_failure">This app could not load the local session. You can try again or pair this device again.</string>
+    <string name="retry">Retry</string>
+    <string name="return_to_pairing">Return to pairing</string>
+    <string name="startup_verifying">Verifying this device…</string>
     <string name="navigate_back">Back</string>
     <string name="sample_wireless_keyboard">Wireless keyboard</string>
     <string name="sample_sku_keyboard">SKU-1042</string>

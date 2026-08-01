@@ -18,4 +18,4 @@ If any required step fails, the coordinator clears the in-memory token and sessi
 
 Local Disconnect clears in-memory token/session first, then secure token and paired metadata. It preserves the discovered store and performs no server revocation. Change Store performs the same cleanup and then clears the discovered store before returning to onboarding.
 
-Secure-session restoration is intentionally deferred. After process restart, the existing startup flow still sees the discovered store and routes to Pairing. It does not load metadata, load the secure token, verify `/auth/me`, or open Products. Startup restoration is deferred to Phase C.
+At startup, the resolver reads the discovered connection, metadata, and secure token asynchronously. It validates their relationship, temporarily installs the token, verifies `/auth/me`, and only then rebuilds the in-memory authenticated session and opens Products. Missing, incomplete, corrupt, invalidated, or revoked sessions return to Pairing. Temporary connectivity, timeout, and TLS failures clear only in-memory authentication and preserve persistent records for Retry.

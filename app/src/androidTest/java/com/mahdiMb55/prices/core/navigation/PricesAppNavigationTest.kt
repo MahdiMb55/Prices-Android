@@ -4,6 +4,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -27,8 +29,21 @@ import com.mahdiMb55.prices.data.repository.PairingResult
 import com.mahdiMb55.prices.data.session.InMemorySessionStore
 import com.mahdiMb55.prices.data.session.SessionStore
 import com.mahdiMb55.prices.data.repository.StoreDiscoveryResult
+import com.mahdiMb55.prices.data.repository.SecureSessionRepository
+import com.mahdiMb55.prices.data.repository.SessionCleanupResult
+import com.mahdiMb55.prices.data.repository.PersistSessionResult
+import com.mahdiMb55.prices.data.repository.StartupResolution
+import com.mahdiMb55.prices.data.repository.StartupSessionResolver
+import com.mahdiMb55.prices.data.local.session.PairedSessionMetadataPreferences
+import com.mahdiMb55.prices.data.local.session.MetadataPersistenceResult
+import com.mahdiMb55.prices.data.local.session.StoredPairedSessionMetadata
+import com.mahdiMb55.prices.data.security.SecureTokenReadResult
+import com.mahdiMb55.prices.data.security.SecureTokenStorage
+import com.mahdiMb55.prices.data.security.SecureTokenWriteResult
+import com.mahdiMb55.prices.data.session.PairedSession
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import org.junit.Rule
 import org.junit.Test
 
@@ -48,6 +63,38 @@ class PricesAppNavigationTest {
     }
 
     @Test
+    fun verifiedRestoredSessionStartsProductsWithoutPairingScreen() {
+        val preferences = FakeConnectionPreferences(discoveredConnection())
+        composeRule.setContent {
+            PricesTheme(darkTheme = false, dynamicColor = false) {
+                PricesApp(testAppContainer(preferences, StartupResolution.Products("Example Store")))
+            }
+        }
+        composeRule.onNodeWithText("Products").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Connect device").assertCountEquals(0)
+    }
+
+    @Test
+    fun retryableVerificationShowsTruthfulRetryAction() {
+        val preferences = FakeConnectionPreferences(discoveredConnection())
+        composeRule.setContent {
+            PricesTheme(darkTheme = false, dynamicColor = false) {
+                PricesApp(
+                    testAppContainer(
+                        preferences,
+                        StartupResolution.RetryableVerificationFailure(
+                            com.mahdiMb55.prices.data.repository.StartupVerificationFailure.RetryableNetworkFailure,
+                            "Example Store",
+                        ),
+                    ),
+                )
+            }
+        }
+        composeRule.onNodeWithText("We could not verify this device right now.").assertIsDisplayed()
+        composeRule.onNodeWithText("Retry").assertIsDisplayed()
+    }
+
+    @Test
     fun rtlDiscoveryRendersWithoutCrashing() {
         composeRule.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -63,9 +110,23 @@ class PricesAppNavigationTest {
         composeRule.setContent { PricesTheme(darkTheme = false, dynamicColor = false) { PricesApp(testAppContainer(preferences)) } }
     }
 
-    private fun testAppContainer(preferences: ConnectionPreferences) = object : AppContainer {
+    private fun testAppContainer(
+        preferences: ConnectionPreferences,
+        startupResolution: StartupResolution? = null,
+    ) = object : AppContainer {
         override val accessTokenStore: MutableAccessTokenStore = InMemoryAccessTokenProvider()
-        override val sessionStore: SessionStore = InMemorySessionStore()
+        override val sessionStore: SessionStore = InMemorySessionStore().apply {
+            if (startupResolution is StartupResolution.Products) {
+                authenticate(
+                    PairedSession(
+                        deviceId = "dev_0123456789abcdef0123456789abcdef",
+                        deviceName = "test-device",
+                        userId = 42L,
+                        store = discoveredConnection(),
+                    ),
+                )
+            }
+        }
         override val pricesApiFactory = PricesApiFactory(accessTokenStore)
         override val connectionPreferences = preferences
         override val storeDiscoveryRepository = object : StoreDiscoveryRepository {
@@ -73,7 +134,32 @@ class PricesAppNavigationTest {
         }
         override val pairingRepository = object : PairingRepository {
             override suspend fun exchange(pairingCode: String, deviceName: String): PairingResult = error("Not used by this test")
-            override fun clearSession() = Unit
+            override suspend fun clearSession() = SessionCleanupResult.Success
+            override suspend fun clearForStoreChange() = SessionCleanupResult.Success
+        }
+        override val secureTokenStorage: SecureTokenStorage = object : SecureTokenStorage {
+            override suspend fun read() = SecureTokenReadResult.Missing
+            override suspend fun write(token: String) = SecureTokenWriteResult.Success
+            override suspend fun clear() = SecureTokenWriteResult.Success
+        }
+        override val pairedSessionMetadataPreferences: PairedSessionMetadataPreferences = object : PairedSessionMetadataPreferences {
+            override val metadata: Flow<StoredPairedSessionMetadata?> = MutableStateFlow(null)
+            override suspend fun readOnce(): StoredPairedSessionMetadata? = null
+            override suspend fun save(metadata: StoredPairedSessionMetadata) = MetadataPersistenceResult.Success
+            override suspend fun clear() = MetadataPersistenceResult.Success
+        }
+        override val secureSessionRepository: SecureSessionRepository = object : SecureSessionRepository {
+            override fun clearInMemorySession() = Unit
+            override suspend fun persistVerifiedSession(token: String, metadata: StoredPairedSessionMetadata, session: PairedSession) = PersistSessionResult.Success
+            override suspend fun clearLocalSession() = SessionCleanupResult.Success
+            override suspend fun clearAllForStoreChange() = SessionCleanupResult.Success
+        }
+        override val startupSessionResolver: StartupSessionResolver = object : StartupSessionResolver {
+            override suspend fun resolve() = startupResolution ?: if (preferences.connection.first() == null) {
+                StartupResolution.Onboarding
+            } else {
+                StartupResolution.Pairing
+            }
         }
         override val appInfoProvider: AppInfoProvider = object : AppInfoProvider {
             override val appInfo = AppInfo("9.8.7", 987L, "com.mahdiMb55.prices.test", true)

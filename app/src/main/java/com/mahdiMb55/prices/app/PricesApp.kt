@@ -26,8 +26,9 @@ import com.mahdiMb55.prices.core.navigation.PricesDestination
 import com.mahdiMb55.prices.feature.connection.PairingRoute
 import com.mahdiMb55.prices.feature.connection.OnboardingRoute
 import com.mahdiMb55.prices.feature.onboarding.OnboardingViewModelFactory
-import com.mahdiMb55.prices.feature.startup.StartupDestination
 import com.mahdiMb55.prices.feature.startup.StartupUiState
+import com.mahdiMb55.prices.feature.startup.StartupVerificationScreen
+import com.mahdiMb55.prices.feature.startup.StartupLoadingScreen
 import com.mahdiMb55.prices.feature.startup.StartupViewModel
 import com.mahdiMb55.prices.feature.startup.StartupViewModelFactory
 import com.mahdiMb55.prices.feature.pairing.PairingViewModelFactory
@@ -55,21 +56,47 @@ fun PricesApp(
         ) {
             composable(PricesDestination.Startup.route) {
                 val startupViewModel: StartupViewModel = viewModel(
-                    factory = StartupViewModelFactory(appContainer.connectionPreferences)
+                    factory = StartupViewModelFactory(
+                        appContainer.startupSessionResolver,
+                        appContainer.secureSessionRepository,
+                    )
                 )
                 val startupState by startupViewModel.uiState.collectAsStateWithLifecycle()
                 LaunchedEffect(startupState) {
                     when (val state = startupState) {
-                        StartupUiState.Loading -> Unit
-                        is StartupUiState.Ready -> when (state.destination) {
-                            StartupDestination.Onboarding -> navController.navigate(PricesDestination.Onboarding.route) {
+                        StartupUiState.Loading,
+                        StartupUiState.VerifyingSession,
+                        is StartupUiState.RetryableVerificationFailure,
+                        is StartupUiState.StorageFailure -> Unit
+                        StartupUiState.Onboarding -> navController.navigate(PricesDestination.Onboarding.route) {
                                 popUpTo(PricesDestination.Startup.route) { inclusive = true }
                             }
-                            StartupDestination.Pairing -> navController.navigate(PricesDestination.Pairing.route) {
+                        StartupUiState.Pairing -> navController.navigate(PricesDestination.Pairing.route) {
                                 popUpTo(PricesDestination.Startup.route) { inclusive = true }
                             }
+                        is StartupUiState.Products -> navController.navigate(PricesDestination.Products.route) {
+                            popUpTo(PricesDestination.Startup.route) { inclusive = true }
                         }
                     }
+                }
+                when (val state = startupState) {
+                    StartupUiState.Loading,
+                    StartupUiState.VerifyingSession -> StartupLoadingScreen()
+                    is StartupUiState.RetryableVerificationFailure -> StartupVerificationScreen(
+                        storeName = state.storeName,
+                        storageFailure = false,
+                        onRetry = startupViewModel::retryVerification,
+                        onReturnToPairing = startupViewModel::returnToPairing,
+                        onChangeStore = startupViewModel::changeStore,
+                    )
+                    is StartupUiState.StorageFailure -> StartupVerificationScreen(
+                        storeName = state.storeName.orEmpty(),
+                        storageFailure = true,
+                        onRetry = startupViewModel::retryVerification,
+                        onReturnToPairing = startupViewModel::returnToPairing,
+                        onChangeStore = startupViewModel::changeStore,
+                    )
+                    else -> Unit
                 }
             }
             composable(PricesDestination.Onboarding.route) {

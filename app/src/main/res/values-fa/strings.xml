@@ -63,6 +63,11 @@
     <string name="version_code">کد نسخه</string>
     <string name="package_name">نام بسته</string>
     <string name="disconnect_app_session">قطع اتصال جلسه این برنامه</string>
+    <string name="startup_verification_failure">اکنون نتوانستیم این دستگاه را تأیید کنیم.</string>
+    <string name="startup_storage_failure">جلسه محلی برنامه بارگذاری نشد. دوباره تلاش کنید یا دستگاه را جفت کنید.</string>
+    <string name="retry">تلاش دوباره</string>
+    <string name="return_to_pairing">بازگشت به جفت‌سازی</string>
+    <string name="startup_verifying">در حال تأیید این دستگاه…</string>
     <string name="navigate_back">بازگشت</string>
     <string name="sample_wireless_keyboard">صفحه‌کلید بی‌سیم</string>
     <string name="sample_sku_keyboard">SKU-1042</string>

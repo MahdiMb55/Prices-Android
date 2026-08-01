@@ -8,7 +8,7 @@ The Android client communicates only with the custom Prices WordPress namespace:
 /wp-json/prices/v1
 ```
 
-It is not a generic WooCommerce REST client. Android never stores or sends WooCommerce consumer keys or secrets. A device bearer token will be issued by a future pairing flow; pairing is not implemented by this networking foundation.
+It is not a generic WooCommerce REST client. Android never stores or sends WooCommerce consumer keys or secrets. A device bearer token is issued by the manual pairing flow and reaches the networking layer only through the in-memory `AccessTokenProvider`; the networking layer never persists or restores it itself.
 
 Implemented Retrofit contracts are discovery, manual pairing exchange, and protected current-session verification:
 
